@@ -14,7 +14,7 @@ class TodoistProject:
     def get_tasks(self) -> List[TodoistTask]:
 
         try:
-            tasks = self.client.get_tasks(project_id=self.p_id)
+            tasks = [task for page in self.client.get_tasks(project_id=self.p_id) for task in page]
         except Exception as error:
             print(error)
             return []
@@ -36,7 +36,7 @@ class TodoistProject:
     def get_sections(self) -> List[TodoistSection]:
 
         try:
-            sections = self.client.get_sections(project_id=self.p_id)
+            sections = [section for page in self.client.get_sections(project_id=self.p_id) for section in page]
         except Exception as error:
             print(error)
             return []

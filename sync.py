@@ -30,7 +30,7 @@ def sync_tasks():
     print("Attempting To Update...")
 
     try:
-        projects = api.get_projects()
+        projects = [project for page in api.get_projects() for project in page]
     except Exception as error:
         print(error)
 
@@ -91,8 +91,8 @@ def sync_tasks():
         if task.status != 'No Submission':
             tast = next((todoist_task for todoist_task in todoist_tasklist if task.assignment_name == todoist_task.name), None)
             try:
-                is_success = api.close_task(tast.id)
-                print("Closed Task: " + tast.name + " " + is_success)
+                is_success = api.complete_task(tast.id)
+                print("Closed Task: " + tast.name + " " + str(is_success))
             except Exception as error:
                 print(error)
 

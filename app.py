@@ -33,7 +33,7 @@ def fetch_exclusion_list(url):
 def sync_tasks():
 
     try:
-        projects = api.get_projects()
+        projects = [project for page in api.get_projects() for project in page]
     except Exception as error:
         print(error)
 
@@ -95,10 +95,10 @@ def sync_tasks():
                 print("Excluded Task::" + task.name)
 
                 try:
-                    is_success = api.close_task(task.id)
+                    is_success = api.complete_task(task.id)
                     print("Closed Task: " + task.name + " " + "Success: " + str(is_success))
                 except Exception as error:
-                    print("Failed To Close Task:" + task.name + " - " + error)
+                    print("Failed To Close Task:" + task.name + " - " + str(error))
 
 
     #excluded_assignment_names = fetch_exclusion_list(EXCLUSION_URL)
@@ -115,10 +115,10 @@ def sync_tasks():
         if task.status != 'No Submission':
             tast = next((todoist_task for todoist_task in todoist_tasklist if task.assignment_name == todoist_task.name), None)
             try:
-                is_success = api.close_task(tast.id)
+                is_success = api.complete_task(tast.id)
                 print("Closed Task: " + tast.name + " " + "Success: " + str(is_success))
             except Exception as error:
-                print("Failed To Close Task:" + tast.name + " - " + error)
+                print("Failed To Close Task:" + tast.name + " - " + str(error))
 
     # Add Sections
     sections = project.get_sections()

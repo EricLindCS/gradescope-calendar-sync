@@ -63,4 +63,5 @@ class CanvasAPI:
 
         except requests.exceptions.RequestException as e:
             print(f"Error fetching courses: {e}")
-            return None
+            # Return an empty list on error to make callers' handling simpler
+            return []

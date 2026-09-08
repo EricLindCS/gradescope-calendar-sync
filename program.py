@@ -31,11 +31,11 @@ def fetch_exclusion_list(url):
 
 def sync_tasks():
     print("Attempting To Update...")
-
     try:
-        projects = api.get_projects()
+        projects = [project for page in api.get_projects() for project in page]
     except Exception as error:
         print(error)
+
 
     project_names = [project.name.lower() for project in projects]
 
@@ -68,6 +68,12 @@ def sync_tasks():
 
     # Get the list of Canvas courses
     canvas_courses_list = canvas_client.get_courses()
+    if canvas_courses_list is None:
+        # Canvas client returns None on errors (for example a 401 Unauthorized).
+        # Avoid crashing later by treating it as an empty list and print a helpful hint.
+        print("Canvas courses could not be fetched. Check CANVAS_API_URL and CANVAS_API (token) environment variables and permissions.")
+        canvas_courses_list = []
+
     non_excluded_canvas_courses = [course for course in canvas_courses_list if course.course_id not in excluded_course_ids]
     canvas_courses = [course for course in non_excluded_canvas_courses if course.get_term() == active_term]
     print("Canvas courses fetched:", [course.course_name for course in canvas_courses])
@@ -78,6 +84,8 @@ def sync_tasks():
         if course.course_name not in combined_courses or True:
             combined_courses[course.course_name] = course
 
+    # Build a set of all course names that belong to this project
+    all_course_names = set(combined_courses.keys())
 
     # Get assignments for the combined courses
     gs_assignments = [course.get_assignments_list() for course in combined_courses.values()]
@@ -102,10 +110,10 @@ def sync_tasks():
                 print("Excluded Task::" + task.name)
 
                 try:
-                    is_success = api.close_task(task.id)
+                    is_success = api.complete_task(task.id)
                     print("Closed Task: " + task.name + " " + "Success: " + str(is_success))
                 except Exception as error:
-                    print("Failed To Close Task:" + task.name + " - " + error)
+                    print("Failed To Close Task:" + task.name + " - " + str(error))
 
 
     #excluded_assignment_names = fetch_exclusion_list(EXCLUSION_URL)
@@ -115,17 +123,17 @@ def sync_tasks():
     gs_todo_list = [task for task in gs_todo_list if task.assignment_name not in excluded_assignment_names]
 
     # Compare and create new tasks if needed
-    existant_result = [obj1 for obj1 in flattened_list if any(obj1.assignment_name == obj2.name and obj1._course.course_name in obj2.labels for obj2 in todoist_tasklist)]
-    no_result = [obj1 for obj1 in gs_todo_list if not any(obj1.assignment_name == obj2.name and obj1._course.course_name in obj2.labels for obj2 in todoist_tasklist)]
+    existant_result = [obj1 for obj1 in flattened_list if any(obj1.assignment_name == obj2.name and any(label in all_course_names for label in obj2.labels) for obj2 in todoist_tasklist)]
+    no_result = [obj1 for obj1 in gs_todo_list if not any(obj1.assignment_name == obj2.name and any(label in all_course_names for label in obj2.labels) for obj2 in todoist_tasklist)]
 
     for task in existant_result:
         if task.status != 'No Submission':
             tast = next((todoist_task for todoist_task in todoist_tasklist if task.assignment_name == todoist_task.name), None)
             try:
-                is_success = api.close_task(tast.id)
+                is_success = api.complete_task(tast.id)
                 print("Closed Task: " + tast.name + " " + "Success: " + str(is_success))
             except Exception as error:
-                print("Failed To Close Task:" + tast.name + " - " + error)
+                print("Failed To Close Task:" + tast.name + " - " + str(error))
 
     print("Closed Tasks:", [tast.name for task in existant_result if task.status != 'No Submission' for tast in todoist_tasklist if task.assignment_name == tast.name])
 
