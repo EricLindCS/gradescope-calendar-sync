@@ -123,19 +123,57 @@ def sync_tasks():
     gs_todo_list = [task for task in gs_todo_list if task.assignment_name not in excluded_assignment_names]
 
     # Compare and create new tasks if needed
-    existant_result = [obj1 for obj1 in flattened_list if any(obj1.assignment_name == obj2.name and any(label in all_course_names for label in obj2.labels) for obj2 in todoist_tasklist)]
-    no_result = [obj1 for obj1 in gs_todo_list if not any(obj1.assignment_name == obj2.name and any(label in all_course_names for label in obj2.labels) for obj2 in todoist_tasklist)]
+    # Match Todoist tasks by both assignment name and the course label to avoid
+    # closing tasks from a different course that share the same name.
+    existant_result = [
+        obj1
+        for obj1 in flattened_list
+        if any(
+            obj1.assignment_name == obj2.name
+            and any(label == obj1._course.course_name for label in obj2.labels)
+            for obj2 in todoist_tasklist
+        )
+    ]
+
+    no_result = [
+        obj1
+        for obj1 in gs_todo_list
+        if not any(
+            obj1.assignment_name == obj2.name
+            and any(label == obj1._course.course_name for label in obj2.labels)
+            for obj2 in todoist_tasklist
+        )
+    ]
 
     for task in existant_result:
         if task.status != 'No Submission':
-            tast = next((todoist_task for todoist_task in todoist_tasklist if task.assignment_name == todoist_task.name), None)
+            # Find the Todoist task that matches both the assignment name and the
+            # course label for this task's course.
+            tast = next(
+                (
+                    todoist_task
+                    for todoist_task in todoist_tasklist
+                    if task.assignment_name == todoist_task.name
+                    and any(label == task._course.course_name for label in todoist_task.labels)
+                ),
+                None,
+            )
             try:
                 is_success = api.complete_task(tast.id)
                 print("Closed Task: " + tast.name + " " + "Success: " + str(is_success))
             except Exception as error:
                 print("Failed To Close Task:" + tast.name + " - " + str(error))
 
-    print("Closed Tasks:", [tast.name for task in existant_result if task.status != 'No Submission' for tast in todoist_tasklist if task.assignment_name == tast.name])
+    print(
+        "Closed Tasks:",
+        [
+            tast.name
+            for task in existant_result
+            if task.status != 'No Submission'
+            for tast in todoist_tasklist
+            if task.assignment_name == tast.name and any(label == task._course.course_name for label in tast.labels)
+        ],
+    )
 
     # Add Sections
     sections = project.get_sections()
