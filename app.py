@@ -157,7 +157,7 @@ def sync_tasks():
 def schedule_sync():
     print("Attempting To Update...")
     sync_tasks()
-    Timer(39.0, schedule_sync).start()  # Re-run every 10 seconds
+    Timer(3600.0, schedule_sync).start()  # Re-run every hour
 
 @app.route('/')
 def home():
